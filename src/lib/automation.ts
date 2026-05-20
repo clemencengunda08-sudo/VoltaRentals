@@ -66,11 +66,31 @@ async function triggerWebhook(endpoint: string, data: any) {
   };
 
   try {
-    // Intelligently handle base URL vs full URL to avoid double-pathing
-    let finalUrl = webhookUrl;
-    if (!finalUrl.endsWith(endpoint) && !finalUrl.includes(endpoint)) {
-      finalUrl = finalUrl.endsWith('/') ? `${finalUrl}${endpoint}` : `${finalUrl}/${endpoint}`;
+    let inputUrl = webhookUrl.trim().replace(/\/+$/, '');
+    
+    // Determine if sandbox or production webhook type
+    let webhookType = 'webhook-test';
+    if (inputUrl.includes('/webhook/')) {
+      webhookType = 'webhook';
+    } else if (inputUrl.includes('/webhook-test/')) {
+      webhookType = 'webhook-test';
+    } else if (inputUrl.endsWith('/webhook')) {
+      webhookType = 'webhook';
+    } else if (inputUrl.endsWith('/webhook-test')) {
+      webhookType = 'webhook-test';
     }
+    
+    // Extract base domain
+    let baseDomain = '';
+    try {
+      const parsed = new URL(inputUrl);
+      baseDomain = `${parsed.protocol}//${parsed.host}`;
+    } catch {
+      const match = inputUrl.match(/^(https?:\/\/[^\/]+)/);
+      baseDomain = match ? match[1] : inputUrl;
+    }
+    
+    const finalUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
 
     const res = await fetch(finalUrl, {
       method: 'POST',

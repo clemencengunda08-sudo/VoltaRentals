@@ -11,8 +11,32 @@ type WebhookEvent =
 
 export async function triggerN8N(event: WebhookEvent, payload: any) {
   try {
-    const url = `${N8N_BASE}/${event}`;
-    console.log(`🔔 n8n trigger: ${event}`, payload);
+    let inputUrl = N8N_BASE.trim().replace(/\/+$/, '');
+    
+    // Determine if sandbox or production webhook type
+    let webhookType = 'webhook-test';
+    if (inputUrl.includes('/webhook/')) {
+      webhookType = 'webhook';
+    } else if (inputUrl.includes('/webhook-test/')) {
+      webhookType = 'webhook-test';
+    } else if (inputUrl.endsWith('/webhook')) {
+      webhookType = 'webhook';
+    } else if (inputUrl.endsWith('/webhook-test')) {
+      webhookType = 'webhook-test';
+    }
+    
+    // Extract base domain
+    let baseDomain = '';
+    try {
+      const parsed = new URL(inputUrl);
+      baseDomain = `${parsed.protocol}//${parsed.host}`;
+    } catch {
+      const match = inputUrl.match(/^(https?:\/\/[^\/]+)/);
+      baseDomain = match ? match[1] : inputUrl;
+    }
+    
+    const url = `${baseDomain}/${webhookType}/volta-booking/${event}`;
+    console.log(`🔔 n8n trigger: ${event} -> ${url}`, payload);
     
     const res = await fetch(url, {
       method: 'POST',

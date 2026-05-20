@@ -154,12 +154,31 @@ function SettingsPageInner() {
     setWebhookStatus('idle');
     try {
       const endpoint = 'volta-booking';
-      let targetUrl = form.n8nWebhookUrl;
+      let inputUrl = form.n8nWebhookUrl.trim().replace(/\/+$/, '');
       
-      // Prevent double-pathing if user provides a full URL
-      if (!targetUrl.endsWith(endpoint) && !targetUrl.includes(endpoint)) {
-        targetUrl = targetUrl.endsWith('/') ? `${targetUrl}${endpoint}` : `${targetUrl}/${endpoint}`;
+      // Determine if sandbox or production webhook type
+      let webhookType = 'webhook-test';
+      if (inputUrl.includes('/webhook/')) {
+        webhookType = 'webhook';
+      } else if (inputUrl.includes('/webhook-test/')) {
+        webhookType = 'webhook-test';
+      } else if (inputUrl.endsWith('/webhook')) {
+        webhookType = 'webhook';
+      } else if (inputUrl.endsWith('/webhook-test')) {
+        webhookType = 'webhook-test';
       }
+      
+      // Extract base domain
+      let baseDomain = '';
+      try {
+        const parsed = new URL(inputUrl);
+        baseDomain = `${parsed.protocol}//${parsed.host}`;
+      } catch {
+        const match = inputUrl.match(/^(https?:\/\/[^\/]+)/);
+        baseDomain = match ? match[1] : inputUrl;
+      }
+      
+      const targetUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
 
       const res = await fetch(targetUrl, {
         method: 'POST',
@@ -195,12 +214,31 @@ function SettingsPageInner() {
     setTestingWebhooks(prev => ({ ...prev, [endpoint]: true }));
     setWebhookStatuses(prev => ({ ...prev, [endpoint]: 'idle' }));
     try {
-      let targetUrl = form.n8nWebhookUrl;
+      let inputUrl = form.n8nWebhookUrl.trim().replace(/\/+$/, '');
       
-      // Prevent double-pathing if user provides a full URL
-      if (!targetUrl.endsWith(endpoint) && !targetUrl.includes(endpoint)) {
-        targetUrl = targetUrl.endsWith('/') ? `${targetUrl}${endpoint}` : `${targetUrl}/${endpoint}`;
+      // Determine if sandbox or production webhook type
+      let webhookType = 'webhook-test';
+      if (inputUrl.includes('/webhook/')) {
+        webhookType = 'webhook';
+      } else if (inputUrl.includes('/webhook-test/')) {
+        webhookType = 'webhook-test';
+      } else if (inputUrl.endsWith('/webhook')) {
+        webhookType = 'webhook';
+      } else if (inputUrl.endsWith('/webhook-test')) {
+        webhookType = 'webhook-test';
       }
+      
+      // Extract base domain
+      let baseDomain = '';
+      try {
+        const parsed = new URL(inputUrl);
+        baseDomain = `${parsed.protocol}//${parsed.host}`;
+      } catch {
+        const match = inputUrl.match(/^(https?:\/\/[^\/]+)/);
+        baseDomain = match ? match[1] : inputUrl;
+      }
+      
+      const targetUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
 
       // Add timestamp and company context to match automation.ts behavior
       const companyName = form.companyName || 'Volta Rentals Tanzania';
