@@ -104,3 +104,20 @@
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* PWA NATIVE MOBILE SYSTEM OPTIMIZATIONS */
+@media all and (display-mode: standalone) {
+  body {
+    /* Disable pull-to-refresh & overscroll bounce on mobile PWA views */
+    overscroll-behavior-y: contain;
+    /* Prevent text selection across the PWA for standard users (gives native feel) */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  /* Ensure form elements and inputs remain editable and selectable */
+  input, textarea, [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}
