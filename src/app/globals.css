@@ -1,0 +1,106 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* LIGHT THEME VARIABLES */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 4%;
+    --card: 0 0% 98%;
+    --card-foreground: 222 47% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 4%;
+    --primary: 0 72% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 38 92% 50%;
+    --secondary-foreground: 222 47% 4%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 161 84% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 0 72% 42%;
+    --radius: 1.5rem;
+
+    /* FONTS */
+    --font-body: var(--font-inter), 'Inter', sans-serif;
+    --font-heading: var(--font-inter), 'Inter', sans-serif;
+  }
+
+  .dark {
+    --background: 222 47% 4%;
+    --foreground: 210 20% 98%;
+    --card: 222 47% 6%;
+    --card-foreground: 210 20% 98%;
+    --popover: 222 47% 5%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 0 72% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 38 92% 50%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 222 47% 8%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 161 84% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 222 47% 10%;
+    --input: 222 47% 8%;
+    --ring: 0 72% 42%;
+  }
+
+  html {
+    background-color: hsl(var(--background));
+    scroll-padding-top: 130px;
+    scroll-behavior: smooth;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/30;
+    font-family: var(--font-body);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, h4, h5, h6 { 
+    @apply font-black tracking-tighter uppercase; 
+    font-family: var(--font-heading);
+  }
+}
+
+@layer components {
+  .executive-card {
+    @apply rounded-[2rem] border border-border bg-card transition-all duration-500 shadow-xl overflow-hidden md:hover:border-primary/30 md:hover:-translate-y-1;
+  }
+}
+
+/* PRINT PROTOCOLS */
+@media print {
+  nav, footer, button:not(.print-button), .no-print, [data-no-print] {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print-content {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  * {
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#cc0000;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b0000;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffcccc;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="100" height="100" rx="22" ry="22" fill="url(#bgGrad)"/>
+  <!-- V shape -->
+  <path d="M15 20 L50 75 L85 20 L72 20 L50 58 L28 20 Z" fill="url(#boltGrad)" opacity="0.9"/>
+  <!-- Lightning bolt -->
+  <path d="M55 18 L38 50 L48 50 L42 78 L62 44 L52 44 Z" fill="white"/>
+</svg>

@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper to check user role from document
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return request.auth != null && getUserData().role == 'super_admin';
+    }
+
+    function isAdmin() {
+      return request.auth != null && (getUserData().role == 'super_admin' || getUserData().role == 'admin' || getUserData().role == 'company_admin' || getUserData().role == 'staff');
+    }
+
+    // CONFIGURATION NODE: Only super admins can write
+    match /_config/{document} {
+      allow read: if request.auth != null;
+      allow write: if isSuperAdmin();
+    }
+
+    // PUBLIC ACCESS FOR PROTOTYPE STABILITY:
+    // Allow reading of cars and settings for everyone
+    match /cars/{carId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /settings/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+    
+    // ALLOW PUBLIC WRITE/READ FOR PAYMENT & NOTIFICATION FLOWS 
+    // (Crucial for API routes and IPN automation)
+    match /bookings/{id} { 
+      allow read, write: if true;
+    }
+    
+    match /payments/{id} { 
+      allow read, write: if true;
+    }
+
+    match /pesapalOrders/{id} { 
+      allow read, write: if true;
+    }
+
+    match /ipnLogs/{id} { 
+      allow read, write: if true;
+    }
+
+    match /notifications/{id} { 
+      allow read, write: if true;
+    }
+
+    match /messages/{id} { 
+      allow create: if true; // Public contact form
+      allow read, update, delete: if isAdmin();
+    }
+    
+    match /users/{userId} { 
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow create: if request.auth != null;
+      allow update: if request.auth.uid == userId && 
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'verified']) || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
+
+    // AUTH REQUIRED FOR EVERYTHING ELSE
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

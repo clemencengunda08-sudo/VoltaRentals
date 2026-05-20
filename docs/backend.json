@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account information and preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phoneNumber": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { 
+          "type": "string", 
+          "enum": ["customer", "super_admin", "admin", "company_admin", "staff", "viewer", "driver"] 
+        },
+        "verified": { "type": "boolean" },
+        "city": { "type": "string" },
+        "companyId": { "type": "string", "description": "Owner of the node" }
+      },
+      "required": ["email"]
+    },
+    "Car": {
+      "title": "Vehicle",
+      "description": "A vehicle in the rental fleet",
+      "type": "object",
+      "properties": {
+        "make": { "type": "string" },
+        "model": { "type": "string" },
+        "year": { "type": "number" },
+        "plateNumber": { "type": "string" },
+        "category": { "type": "string" },
+        "pricePerDay": { "type": "number" },
+        "withDriverCostPerDay": { "type": "number" },
+        "available": { "type": "boolean" },
+        "location": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "companyId": { "type": "string" }
+      }
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A comprehensive rental booking request with AI and accounting data",
+      "type": "object",
+      "properties": {
+        "bookingCode": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "vehicleId": { "type": "string" },
+        "vehicleName": { "type": "string" },
+        "vehiclePlate": { "type": "string" },
+        "pickupLocation": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "totalDays": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "amountPaid": { "type": "number" },
+        "balanceDue": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "active", "completed", "cancelled"] },
+        "paymentStatus": { "type": "string", "enum": ["unpaid", "partial", "paid"] },
+        "companyId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "driverName": { "type": "string" },
+        "driverEmail": { "type": "string" },
+        "reminder48Sent": { "type": "boolean" },
+        "reminder24Sent": { "type": "boolean" },
+        "aiEmailSent": { "type": "boolean" },
+        "aiPersonalityTag": { "type": "string", "enum": ["luxury", "corporate", "adventure", "standard"] },
+        "geminiInsight": { "type": "string" },
+        "contractUrl": { "type": "string" }
+      }
+    },
+    "Payment": {
+      "title": "Payment Record",
+      "description": "Financial transaction registry",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string" },
+        "bookingCode": { "type": "string" },
+        "amount": { "type": "number" },
+        "method": { "type": "string" },
+        "reference": { "type": "string" },
+        "status": { "type": "string" },
+        "companyId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Company": {
+      "title": "Company Profile",
+      "description": "SME Business profile in the ecosystem",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "plan": { "type": "string", "enum": ["free", "pro", "enterprise"] },
+        "active": { "type": "boolean" },
+        "logoUrl": { "type": "string" },
+        "whatsappNumber": { "type": "string" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "UserProfile", "description": "User profiles" },
+    "/cars/{carId}": { "schema": "Car", "description": "Fleet inventory" },
+    "/bookings/{bookingId}": { "schema": "Booking", "description": "Operational registry" },
+    "/payments/{paymentId}": { "schema": "Payment", "description": "Transactional log" },
+    "/companies/{companyId}": { "schema": "Company", "description": "Business nodes" },
+    "/analytics/{companyId}/daily/{date}": { "schema": "object", "description": "Daily performance snapshots" },
+    "/analytics/{companyId}/monthly/{month}": { "schema": "object", "description": "Monthly executive summaries" }
+  }
+}

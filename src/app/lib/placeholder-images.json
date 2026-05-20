@@ -1,0 +1,40 @@
+{
+  "placeholderImages": [
+    {
+      "id": "model-s",
+      "description": "Tesla Model S Plaid in deep blue",
+      "imageUrl": "",
+      "imageHint": "Tesla Model S"
+    },
+    {
+      "id": "lucid-air",
+      "description": "Lucid Air luxury electric sedan",
+      "imageUrl": "",
+      "imageHint": "Lucid Air"
+    },
+    {
+      "id": "porsche-taycan",
+      "description": "Porsche Taycan Turbo S",
+      "imageUrl": "",
+      "imageHint": "Porsche Taycan"
+    },
+    {
+      "id": "mercedes-eqs",
+      "description": "Mercedes-Benz EQS luxury sedan",
+      "imageUrl": "",
+      "imageHint": "Mercedes EQS"
+    },
+    {
+      "id": "rivian-r1s",
+      "description": "Rivian R1S electric SUV",
+      "imageUrl": "",
+      "imageHint": "Rivian R1S"
+    },
+    {
+      "id": "hero-bg",
+      "description": "Modern electric car charging at night",
+      "imageUrl": "",
+      "imageHint": "Luxury EV"
+    }
+  ]
+}
