@@ -32,6 +32,7 @@ import { motion as m, AnimatePresence } from 'framer-motion';
 import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import Link from 'next/link';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
 
 export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
@@ -42,6 +43,7 @@ export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const db = useFirestore();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { t } = useLanguage();
 
   const notifQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -55,25 +57,25 @@ export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { data: notifications } = useCollection(notifQuery);
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
-  const routeMap: Record<string, string> = {
-    '/admin': 'Master Overview',
-    '/admin/bookings': 'Reservation Registry',
-    '/admin/cars': 'Fleet Inventory Hub',
-    '/admin/payments': 'Financial Verification',
-    '/admin/analytics': 'Business Intelligence',
-    '/admin/reports': 'Audit Archives',
-    '/admin/users': 'Customer CRM',
-    '/admin/reviews': 'Feedback Protocol',
-    '/admin/messages': 'Communication Node',
-    '/admin/settings': 'System Protocols',
-    '/super-admin': 'Supreme Master Control',
+  const routeMap: Record<string, { key: string; label: string }> = {
+    '/admin': { key: 'overview', label: 'Master Overview' },
+    '/admin/bookings': { key: 'reservations', label: 'Reservation Registry' },
+    '/admin/cars': { key: 'fleet', label: 'Fleet Inventory Hub' },
+    '/admin/payments': { key: 'financials', label: 'Financial Verification' },
+    '/admin/analytics': { key: 'analytics', label: 'Business Intelligence' },
+    '/admin/reports': { key: 'audit', label: 'Audit Archives' },
+    '/admin/users': { key: 'crm', label: 'Customer CRM' },
+    '/admin/reviews': { key: 'feedback', label: 'Feedback Protocol' },
+    '/admin/messages': { key: 'comms', label: 'Communication Node' },
+    '/admin/settings': { key: 'settings', label: 'System Protocols' },
+    '/super-admin': { key: 'superadmin', label: 'Supreme Master Control' },
   };
 
   const getTitle = () => {
     for (const route in routeMap) {
-      if (pathname.startsWith(route)) return routeMap[route];
+      if (pathname.startsWith(route)) return t(routeMap[route].key, routeMap[route].label);
     }
-    return 'Admin Command';
+    return t('adminCommand', 'Admin Command');
   };
 
   const breadcrumbs = pathname.split('/').filter(Boolean);
@@ -125,15 +127,17 @@ export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
                 onSubmit={(e) => {
                   e.preventDefault();
                   const term = searchQuery.toLowerCase();
-                  const match = Object.entries(routeMap).find(([path, name]) => 
-                    name.toLowerCase().includes(term) || path.toLowerCase().includes(term)
+                  const match = Object.entries(routeMap).find(([path, val]) => 
+                    val.label.toLowerCase().includes(term) || 
+                    t(val.key, val.label).toLowerCase().includes(term) || 
+                    path.toLowerCase().includes(term)
                   );
                   if (match) {
                     router.push(match[0]);
                     setSearchOpen(false);
                     setSearchQuery('');
                   } else {
-                    toast({ title: 'No matching terminal found.', variant: 'destructive' });
+                    toast({ title: t('noTerminalFound', 'No matching terminal found.'), variant: 'destructive' });
                   }
                 }}
                 className="relative"
@@ -142,7 +146,7 @@ export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
                   autoFocus
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Query registry..." 
+                  placeholder={t('queryRegistry', 'Query registry...')}
                   className="h-10 rounded-xl pr-10 bg-muted border-none text-foreground text-xs font-bold"
                 />
                 <button 
@@ -181,22 +185,22 @@ export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
               </div>
               <div className="hidden sm:block text-left">
                 <p className="text-xs font-black leading-none text-foreground">{user?.displayName?.split(' ')[0] || 'Admin'}</p>
-                <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Admin Protocol</p>
+                <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{t('adminProtocol', 'Admin Protocol')}</p>
               </div>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-2xl bg-card border-border">
-            <DropdownMenuLabel className="font-black text-[9px] uppercase tracking-widest text-muted-foreground px-3 py-2 text-center border-b border-border mb-2">Authority Profile</DropdownMenuLabel>
+            <DropdownMenuLabel className="font-black text-[9px] uppercase tracking-widest text-muted-foreground px-3 py-2 text-center border-b border-border mb-2">{t('authorityProfile', 'Authority Profile')}</DropdownMenuLabel>
             
             <DropdownMenuItem asChild>
               <Link href="/admin/profile" className="rounded-xl h-11 font-bold gap-4 text-foreground focus:bg-primary focus:text-white cursor-pointer px-4 flex items-center">
-                 <User size={18} /> <span className="text-sm">Personal Registry</span>
+                 <User size={18} /> <span className="text-sm">{t('personalRegistry', 'Personal Registry')}</span>
               </Link>
             </DropdownMenuItem>
             
             <DropdownMenuItem asChild>
               <Link href={user?.role === 'super_admin' ? "/super-admin/settings" : "/admin/settings"} className="rounded-xl h-11 font-bold gap-4 text-foreground focus:bg-primary focus:text-white cursor-pointer px-4 flex items-center">
-                 <Settings size={18} /> <span className="text-sm">Global Config</span>
+                 <Settings size={18} /> <span className="text-sm">{t('globalConfig', 'Global Config')}</span>
               </Link>
             </DropdownMenuItem>
 
@@ -206,7 +210,7 @@ export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
               onClick={handleLogout}
               className="rounded-xl h-11 font-bold gap-4 text-red-500 focus:bg-red-500/10 cursor-pointer px-4 flex items-center"
             >
-              <LogOut size={18} /> <span className="text-sm">Terminate Session</span>
+              <LogOut size={18} /> <span className="text-sm">{t('terminateSession', 'Terminate Session')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

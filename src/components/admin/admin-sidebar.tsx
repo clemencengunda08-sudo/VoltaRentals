@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -37,40 +38,44 @@ import { useBranding } from '@/components/providers/BrandingProvider';
 const NAV_GROUPS = [
   {
     label: "Operations",
+    key: "operations",
     items: [
-      { icon: LayoutDashboard, label: "Command Center", href: "/admin", color: "text-blue-400", roles: ['super_admin', 'admin', 'company_admin', 'staff', 'viewer'] },
-      { icon: ClipboardList, label: "Registry Orders", href: "/admin/bookings", color: "text-yellow-400", roles: ['super_admin', 'admin', 'company_admin', 'staff', 'viewer'] },
-      { icon: UserPlus, label: "Manual Booking", href: "/admin/bookings/manual", color: "text-emerald-400", roles: ['super_admin', 'admin', 'company_admin', 'staff'] },
-      { icon: Car, label: "Fleet Control", href: "/admin/cars", color: "text-emerald-400", roles: ['super_admin', 'admin', 'company_admin', 'staff', 'viewer'] },
-      { icon: UserCheck, label: "Driver Dispatch", href: "/admin/drivers", color: "text-orange-400", roles: ['super_admin', 'admin', 'company_admin', 'staff'] },
+      { icon: LayoutDashboard, label: "Command Center", key: "commandCenter", href: "/admin", color: "text-blue-400", roles: ['super_admin', 'admin', 'company_admin', 'staff', 'viewer'] },
+      { icon: ClipboardList, label: "Registry Orders", key: "registryOrders", href: "/admin/bookings", color: "text-yellow-400", roles: ['super_admin', 'admin', 'company_admin', 'staff', 'viewer'] },
+      { icon: UserPlus, label: "Manual Booking", key: "manualBooking", href: "/admin/bookings/manual", color: "text-emerald-400", roles: ['super_admin', 'admin', 'company_admin', 'staff'] },
+      { icon: Car, label: "Fleet Control", key: "fleetControl", href: "/admin/cars", color: "text-emerald-400", roles: ['super_admin', 'admin', 'company_admin', 'staff', 'viewer'] },
+      { icon: UserCheck, label: "Driver Dispatch", key: "driverDispatch", href: "/admin/drivers", color: "text-orange-400", roles: ['super_admin', 'admin', 'company_admin', 'staff'] },
     ]
   },
   {
     label: "Intelligence",
+    key: "intelligence",
     items: [
-      { icon: CreditCard, label: "Financial Ledger", href: "/admin/payments", color: "text-red-400", roles: ['super_admin', 'admin', 'company_admin', 'viewer'] },
-      { icon: PieChart, label: "Analytics Terminal", href: "/admin/analytics", color: "text-purple-400", roles: ['super_admin', 'admin', 'company_admin'] },
+      { icon: CreditCard, label: "Financial Ledger", key: "financialLedger", href: "/admin/payments", color: "text-red-400", roles: ['super_admin', 'admin', 'company_admin', 'viewer'] },
+      { icon: PieChart, label: "Analytics Terminal", key: "analyticsTerminal", href: "/admin/analytics", color: "text-purple-400", roles: ['super_admin', 'admin', 'company_admin'] },
     ]
   },
   {
     label: "Management",
+    key: "management",
     items: [
-      { icon: Users, label: "Elite Travelers", href: "/admin/users", color: "text-orange-400", roles: ['super_admin', 'admin', 'company_admin', 'staff'] },
-      { icon: Star, label: "Feedback Audit", href: "/admin/reviews", color: "text-pink-400", roles: ['super_admin', 'admin', 'company_admin', 'staff'] },
-      { icon: MessageSquare, label: "Inquiry Hub", href: "/admin/messages", color: "text-cyan-400", roles: ['super_admin', 'admin', 'company_admin', 'staff'] },
-      { icon: Settings, label: "Compliance (TRA)", href: "/admin/settings", color: "text-emerald-500", roles: ['super_admin', 'admin', 'company_admin'] },
+      { icon: Users, label: "Elite Travelers", key: "eliteTravelers", href: "/admin/users", color: "text-orange-400", roles: ['super_admin', 'admin', 'company_admin', 'staff'] },
+      { icon: Star, label: "Feedback Audit", key: "feedbackAudit", href: "/admin/reviews", color: "text-pink-400", roles: ['super_admin', 'admin', 'company_admin', 'staff'] },
+      { icon: MessageSquare, label: "Inquiry Hub", key: "inquiryHub", href: "/admin/messages", color: "text-cyan-400", roles: ['super_admin', 'admin', 'company_admin', 'staff'] },
+      { icon: Settings, label: "Compliance (TRA)", key: "complianceTRA", href: "/admin/settings", color: "text-emerald-500", roles: ['super_admin', 'admin', 'company_admin'] },
     ]
   },
   {
     label: "Supreme Authority",
+    key: "supremeAuthority",
     items: [
-      { icon: ShieldAlert, label: "Master Command", href: "/super-admin", color: "text-rose-500", roles: ['super_admin'] },
-      { icon: Users, label: "Authority Registry", href: "/super-admin/admins", color: "text-indigo-400", roles: ['super_admin'] },
-      { icon: Palette, label: "Theme Studio", href: "/super-admin/settings/theme", color: "text-purple-400", roles: ['super_admin'] },
-      { icon: ImageIcon, label: "Visual Media", href: "/super-admin/media", color: "text-amber-400", roles: ['super_admin'] },
-      { icon: Zap, label: "Automation Hub", href: "/super-admin/settings?tab=automation", color: "text-primary", roles: ['super_admin'] },
-      { icon: Database, label: "Maintenance Protocol", href: "/super-admin/maintenance", color: "text-red-500", roles: ['super_admin'] },
-      { icon: Settings, label: "Global Protocols", href: "/super-admin/settings", color: "text-zinc-400", roles: ['super_admin'] },
+      { icon: ShieldAlert, label: "Master Command", key: "masterCommand", href: "/super-admin", color: "text-rose-500", roles: ['super_admin'] },
+      { icon: Users, label: "Authority Registry", key: "authorityRegistry", href: "/super-admin/admins", color: "text-indigo-400", roles: ['super_admin'] },
+      { icon: Palette, label: "Theme Studio", key: "themeStudio", href: "/super-admin/settings/theme", color: "text-purple-400", roles: ['super_admin'] },
+      { icon: ImageIcon, label: "Visual Media", key: "visualMedia", href: "/super-admin/media", color: "text-amber-400", roles: ['super_admin'] },
+      { icon: Zap, label: "Automation Hub", key: "automationHub", href: "/super-admin/settings?tab=automation", color: "text-primary", roles: ['super_admin'] },
+      { icon: Database, label: "Maintenance Protocol", key: "maintenanceProtocol", href: "/super-admin/maintenance", color: "text-red-500", roles: ['super_admin'] },
+      { icon: Settings, label: "Global Protocols", key: "globalProtocols", href: "/super-admin/settings", color: "text-zinc-400", roles: ['super_admin'] },
     ]
   }
 ];
@@ -87,6 +92,7 @@ export function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: 
   const { user } = useUser();
   const auth = useAuth();
   const { companyName } = useBranding();
+  const { t } = useLanguage();
 
   const userRole = user?.role || 'admin';
   const isSuperAdmin = userRole === 'super_admin' || (user?.email && SUPREME_MASTERS.includes(user.email));
@@ -154,15 +160,15 @@ export function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: 
           if (visibleItems.length === 0) return null;
 
           return (
-            <div key={group.label} className="space-y-2">
+            <div key={group.key} className="space-y-2">
               {!collapsed && (
-                <p className="px-4 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">{group.label}</p>
+                <p className="px-4 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">{t(group.key, group.label)}</p>
               )}
               <div className="space-y-1">
                 {visibleItems.map((item) => {
                   const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
                   return (
-                    <TooltipProvider key={item.label} delayDuration={0}>
+                    <TooltipProvider key={item.key} delayDuration={0}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Link
@@ -177,7 +183,7 @@ export function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: 
                           >
                             <item.icon className={cn("h-5 w-5 shrink-0 transition-transform group-hover:scale-110", isActive ? "text-secondary fill-current" : item.color)} />
                             {(!collapsed || (typeof window !== 'undefined' && window.innerWidth < 1024)) && (
-                              <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest">{t(item.key, item.label)}</span>
                             )}
                             {isActive && !collapsed && (
                               <motion.div 
@@ -221,7 +227,9 @@ export function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: 
               <p className="text-xs font-black text-foreground truncate uppercase">{user?.displayName?.split(' ')[0] || 'Admin'}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
                  <ShieldCheck size={8} className="text-emerald-500" />
-                 <p className="text-[7px] text-muted-foreground font-bold truncate uppercase tracking-widest">{isSuperAdmin ? 'MASTER ARCHITECT' : 'ADMIN PROTOCOL'}</p>
+                 <p className="text-[7px] text-muted-foreground font-bold truncate uppercase tracking-widest">
+                   {isSuperAdmin ? t('masterArchitect', 'MASTER ARCHITECT') : t('adminProtocol', 'ADMIN PROTOCOL')}
+                 </p>
               </div>
             </div>
           ) : null}
@@ -241,7 +249,9 @@ export function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: 
           )}
         >
           <LogOut className="h-4 w-4 shrink-0" />
-          {(!collapsed || (typeof window !== 'undefined' && window.innerWidth < 1024)) && <span className="ml-3 text-[10px] font-black uppercase tracking-widest">Terminate Session</span>}
+          {(!collapsed || (typeof window !== 'undefined' && window.innerWidth < 1024)) && (
+            <span className="ml-3 text-[10px] font-black uppercase tracking-widest">{t('terminateSession', 'Terminate Session')}</span>
+          )}
         </Button>
       </div>
     </motion.aside>

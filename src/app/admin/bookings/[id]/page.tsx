@@ -40,9 +40,11 @@ import { generateRentalContract, generateBookingReceipt } from "@/lib/pdf-utils"
 import { automation } from "@/lib/automation";
 import { analyzeBooking } from "@/ai/flows/analyze-booking";
 import { SignaturePad } from "@/components/signature-pad";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { t } = useLanguage();
   const db = useFirestore();
   const bookingRef = doc(db, "bookings", id);
   const { data: booking, loading } = useDoc(bookingRef);
@@ -131,6 +133,8 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
     } finally {
       setIsUpdating(false);
     }
+  };
+
   const handleCompletePaymentInFull = async () => {
     if (!booking) return;
     setIsUpdating(true);
@@ -178,28 +182,38 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 w-full md:flex md:w-auto md:gap-4 shrink-0">
-           <Button 
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap md:flex-nowrap gap-2 w-full md:w-auto md:gap-4 shrink-0">
+          <Button 
             onClick={handleRunAiAnalysis} 
             disabled={isAnalyzing}
             variant="outline"
             className="rounded-2xl h-14 border-primary/20 text-primary font-black uppercase text-[10px] sm:text-xs gap-1.5 sm:gap-3 flex-1 md:flex-initial"
           >
             {isAnalyzing ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw size={14} className="shrink-0" />}
-            Analyze
+            {t('analyze', 'Analyze')}
           </Button>
           <Button 
             onClick={() => generateRentalContract(booking)} 
             className="bg-card border border-border text-foreground rounded-2xl h-14 font-black uppercase text-[10px] sm:text-xs gap-1.5 sm:gap-3 shadow-xl flex-1 md:flex-initial"
           >
-            <FileText size={14} className="shrink-0" /> Contract
+            <FileText size={14} className="shrink-0" /> {t('contract', 'Contract')}
           </Button>
           <Button 
             onClick={() => generateBookingReceipt(booking)} 
             className="bg-primary hover:bg-primary/90 text-white rounded-2xl h-14 font-black uppercase text-[10px] sm:text-xs gap-1.5 sm:gap-3 shadow-xl shadow-primary/20 flex-1 md:flex-initial"
           >
-            <DollarSign size={14} className="shrink-0" /> Receipt
+            <DollarSign size={14} className="shrink-0" /> {t('receipt', 'Receipt')}
           </Button>
+          {booking.paymentStatus !== 'paid' && (
+            <Button 
+              onClick={handleCompletePaymentInFull} 
+              disabled={isUpdating}
+              className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black uppercase text-[10px] sm:text-xs gap-1.5 sm:gap-3 rounded-2xl h-14 shadow-lg shadow-amber-500/20 flex-1 md:flex-initial animate-pulse"
+            >
+              {isUpdating ? <Loader2 className="animate-spin h-4 w-4" /> : <Zap size={14} className="shrink-0 fill-current text-black" />}
+              {t('completePaymentShort', 'Complete Payment')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -302,18 +316,40 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
                 </h3>
              </div>
              <CardContent className="p-10 space-y-10">
+                {booking.paymentStatus !== 'paid' && (
+                  <div className="p-6 rounded-3xl bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border border-amber-500/20 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-inner">
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">{t('unpaidBalanceNotice', 'Outstanding Balance Due')}</p>
+                      <h4 className="text-2xl font-black text-foreground tracking-tighter">
+                        {((booking.totalPrice || 0) - (booking.amountPaid || 0)).toLocaleString()} TSh
+                      </h4>
+                      <p className="text-[10px] text-muted-foreground font-medium">
+                        {t('syncNotice', 'Settling this will instantly update paymentStatus to "paid" and trigger n8n ledger sync.')}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleCompletePaymentInFull}
+                      disabled={isUpdating}
+                      className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black uppercase text-[10px] tracking-widest rounded-2xl h-14 px-8 shadow-xl shadow-amber-500/10 gap-2 shrink-0 self-stretch md:self-auto transition-transform active:scale-95"
+                    >
+                      {isUpdating ? <Loader2 className="animate-spin h-4 w-4" /> : <Zap size={14} className="fill-current text-black" />}
+                      {t('completePaymentInFull', 'Complete Payment in Full')}
+                    </Button>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                    <div className="space-y-2">
-                      <Label className="text-[9px] font-black uppercase text-muted-foreground">Assign Fleet Driver</Label>
+                      <Label className="text-[9px] font-black uppercase text-muted-foreground">{t('assignDriver', 'Assign Fleet Driver')}</Label>
                       <Select value={driverName} onValueChange={setDriverName}>
-                         <SelectTrigger className="h-12 rounded-xl bg-muted border-none font-bold uppercase text-[10px]"><SelectValue placeholder="Select Registry Driver" /></SelectTrigger>
+                         <SelectTrigger className="h-12 rounded-xl bg-muted border-none font-bold uppercase text-[10px]"><SelectValue placeholder={t('driverSelectorPlaceholder', 'Select Registry Driver')} /></SelectTrigger>
                          <SelectContent className="bg-card border-border">
                             {drivers.map(d => <SelectItem key={d.id} value={d.displayName} className="font-bold text-[10px] uppercase">{d.displayName}</SelectItem>)}
                          </SelectContent>
                       </Select>
                    </div>
                    <div className="space-y-2">
-                      <Label className="text-[9px] font-black uppercase text-muted-foreground">Manual Payment Received (TSh)</Label>
+                      <Label className="text-[9px] font-black uppercase text-muted-foreground">{t('manualPaymentReceived', 'Manual Payment Received (TSh)')}</Label>
                       <Input 
                         type="number" 
                         value={amountPaid} 
@@ -321,7 +357,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
                         className="h-12 rounded-xl bg-muted border-none font-bold text-foreground" 
                         placeholder="e.g. 150000"
                       />
-                      <p className="text-[8px] text-muted-foreground uppercase font-medium italic mt-1">"Use this to log cash or office settlements."</p>
+                      <p className="text-[8px] text-muted-foreground uppercase font-medium italic mt-1">{t('manualPaymentTip', '"Use this to log cash or office settlements."')}</p>
                    </div>
                 </div>
                 <Button 
@@ -330,7 +366,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
                   className="w-full h-16 rounded-2xl bg-white text-black hover:bg-white/90 font-black uppercase text-[10px] tracking-widest shadow-xl transition-all active:scale-95 gap-3"
                 >
                   {isUpdating ? <Loader2 className="animate-spin h-4 w-4" /> : <ShieldCheck size={18} />}
-                  Commit Financial Protocol
+                  {t('commitFinancial', 'Commit Financial Protocol')}
                 </Button>
              </CardContent>
           </Card>
@@ -339,7 +375,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
         <div className="lg:col-span-4 space-y-6">
           <Card className="rounded-[2.5rem] border-border bg-card overflow-hidden shadow-2xl">
              <div className="p-8 border-b border-border bg-muted/20">
-                <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em]">Workflow Status</h3>
+                <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em]">{t('workflowStatus', 'Workflow Status')}</h3>
              </div>
              <CardContent className="p-8 space-y-3">
                {['pending', 'confirmed', 'active', 'completed', 'cancelled'].map(s => (
@@ -354,7 +390,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
                       : "bg-muted border-transparent text-muted-foreground hover:border-border hover:bg-card hover:text-foreground"
                    )}
                  >
-                   {s}
+                   {t(s, s)}
                  </Button>
                ))}
              </CardContent>
@@ -363,48 +399,48 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
           <div className="p-8 bg-primary/10 border border-primary/20 rounded-[2.5rem] flex gap-4 items-start shadow-inner">
              <AlertTriangle className="text-primary shrink-0" size={20} />
              <p className="text-[10px] text-blue-100/60 font-medium leading-relaxed italic">
-                "Protocol Notice: Manual payments are logged in the financial ledger and synced with n8n accounting nodes instantly."
+                {t('protocolNotice', '"Protocol Notice: Manual payments are logged in the financial ledger and synced with n8n accounting nodes instantly."')}
              </p>
           </div>
 
           <Card className="rounded-[2.5rem] border-border bg-card overflow-hidden shadow-2xl">
             <div className="p-8 border-b border-border bg-muted/20">
               <h3 className="text-[11px] font-black uppercase text-primary tracking-[0.3em] flex items-center gap-2">
-                <PenTool size={16} /> Digital Signatures (Dual Authorization)
+                <PenTool size={16} /> {t('digitalSignatures', 'Digital Signatures (Dual Authorization)')}
               </h3>
             </div>
             <CardContent className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6 border-r-0 md:border-r border-border md:pr-8">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary text-center">Client Signature</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary text-center">{t('clientSignature', 'Client Signature')}</h4>
                 {booking.clientSignature ? (
                   <div className="space-y-4 text-center">
                     <div className="bg-white border-2 border-dashed border-emerald-500/20 rounded-[1.5rem] p-4 flex justify-center shadow-inner">
                       <img src={booking.clientSignature} alt="Client Signature" className="h-20 object-contain" />
                     </div>
-                    <Badge className="bg-emerald-500/10 text-emerald-500 border-none px-4 py-2 text-[10px] uppercase font-black tracking-widest w-full justify-center"><CheckCircle2 size={14} className="mr-2 inline" /> Client Bound</Badge>
-                    <Button variant="outline" onClick={() => updateDoc(bookingRef, { clientSignature: null })} className="w-full mt-4 rounded-xl text-[10px] uppercase font-black text-red-500 border-red-500/20 hover:bg-red-500/5">Reset Client Sign</Button>
+                    <Badge className="bg-emerald-500/10 text-emerald-500 border-none px-4 py-2 text-[10px] uppercase font-black tracking-widest w-full justify-center"><CheckCircle2 size={14} className="mr-2 inline" /> {t('clientBound', 'Client Bound')}</Badge>
+                    <Button variant="outline" onClick={() => updateDoc(bookingRef, { clientSignature: null })} className="w-full mt-4 rounded-xl text-[10px] uppercase font-black text-red-500 border-red-500/20 hover:bg-red-500/5">{t('resetSignature', 'Reset Client Sign')}</Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <p className="text-[9px] text-muted-foreground uppercase font-medium italic text-center">"Client must sign here"</p>
+                    <p className="text-[9px] text-muted-foreground uppercase font-medium italic text-center">{t('clientSignTip', '"Client must sign here"')}</p>
                     <SignaturePad bookingId={booking.id} type="client" />
                   </div>
                 )}
               </div>
 
               <div className="space-y-6">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary text-center">Admin / Dispatch Signature</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary text-center">{t('adminSignature', 'Admin / Dispatch Signature')}</h4>
                 {booking.adminSignature ? (
                   <div className="space-y-4 text-center">
                     <div className="bg-white border-2 border-dashed border-emerald-500/20 rounded-[1.5rem] p-4 flex justify-center shadow-inner">
                       <img src={booking.adminSignature} alt="Admin Signature" className="h-20 object-contain" />
                     </div>
-                    <Badge className="bg-emerald-500/10 text-emerald-500 border-none px-4 py-2 text-[10px] uppercase font-black tracking-widest w-full justify-center"><CheckCircle2 size={14} className="mr-2 inline" /> Admin Authorized</Badge>
-                    <Button variant="outline" onClick={() => updateDoc(bookingRef, { adminSignature: null })} className="w-full mt-4 rounded-xl text-[10px] uppercase font-black text-red-500 border-red-500/20 hover:bg-red-500/5">Reset Admin Sign</Button>
+                    <Badge className="bg-emerald-500/10 text-emerald-500 border-none px-4 py-2 text-[10px] uppercase font-black tracking-widest w-full justify-center"><CheckCircle2 size={14} className="mr-2 inline" /> {t('adminAuthorized', 'Admin Authorized')}</Badge>
+                    <Button variant="outline" onClick={() => updateDoc(bookingRef, { adminSignature: null })} className="w-full mt-4 rounded-xl text-[10px] uppercase font-black text-red-500 border-red-500/20 hover:bg-red-500/5">{t('resetSignature', 'Reset Admin Sign')}</Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <p className="text-[9px] text-muted-foreground uppercase font-medium italic text-center">"Admin authorizes vehicle release"</p>
+                    <p className="text-[9px] text-muted-foreground uppercase font-medium italic text-center">{t('adminSignTip', '"Admin authorizes vehicle release"')}</p>
                     <SignaturePad bookingId={booking.id} type="admin" />
                   </div>
                 )}
