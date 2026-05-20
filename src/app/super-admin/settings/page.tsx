@@ -62,6 +62,12 @@ function SettingsPageInner() {
     broadcastTitle: '',
     broadcastMessage: '',
     n8nWebhookUrl: '',
+    webhookUrlBooking: '',
+    webhookUrlPayment: '',
+    webhookUrlStatus: '',
+    webhookUrlCar: '',
+    webhookUrlDriver: '',
+    webhookUrlUser: '',
     pesapalEnv: 'sandbox',
     pesapalKey: '',
     pesapalSecret: '',
@@ -103,6 +109,12 @@ function SettingsPageInner() {
         tin: form.tin ?? "",
         efdEmail: form.efdEmail ?? "",
         n8nWebhookUrl: form.n8nWebhookUrl ?? "",
+        webhookUrlBooking: form.webhookUrlBooking ?? "",
+        webhookUrlPayment: form.webhookUrlPayment ?? "",
+        webhookUrlStatus: form.webhookUrlStatus ?? "",
+        webhookUrlCar: form.webhookUrlCar ?? "",
+        webhookUrlDriver: form.webhookUrlDriver ?? "",
+        webhookUrlUser: form.webhookUrlUser ?? "",
         updatedAt: serverTimestamp()
       };
       await setDoc(doc(db, 'settings', 'branding'), brandingData, { merge: true });
@@ -207,16 +219,21 @@ function SettingsPageInner() {
   };
 
   const testSingleWebhook = async (endpoint: string, payload: any) => {
-    if (!form.n8nWebhookUrl) {
-      toast({ variant: "destructive", title: "Enter webhook URL first" });
-      return;
-    }
-    setTestingWebhooks(prev => ({ ...prev, [endpoint]: true }));
-    setWebhookStatuses(prev => ({ ...prev, [endpoint]: 'idle' }));
-    try {
+    let targetUrl = '';
+    if (endpoint === 'volta-booking') targetUrl = form.webhookUrlBooking;
+    else if (endpoint === 'payment-verified') targetUrl = form.webhookUrlPayment;
+    else if (endpoint === 'booking-status-updated') targetUrl = form.webhookUrlStatus;
+    else if (endpoint === 'car-added') targetUrl = form.webhookUrlCar;
+    else if (endpoint === 'driver-added') targetUrl = form.webhookUrlDriver;
+    else if (endpoint === 'volta-user-register') targetUrl = form.webhookUrlUser;
+
+    // Fallback to legacy base URL parsing if individual URL is empty
+    if (!targetUrl) {
+      if (!form.n8nWebhookUrl) {
+        toast({ variant: "destructive", title: "Enter a webhook URL for this trigger first" });
+        return;
+      }
       let inputUrl = form.n8nWebhookUrl.trim().replace(/\/+$/, '');
-      
-      // Determine if sandbox or production webhook type
       let webhookType = 'webhook-test';
       if (inputUrl.includes('/webhook/')) {
         webhookType = 'webhook';
@@ -228,7 +245,6 @@ function SettingsPageInner() {
         webhookType = 'webhook-test';
       }
       
-      // Extract base domain
       let baseDomain = '';
       try {
         const parsed = new URL(inputUrl);
@@ -237,9 +253,12 @@ function SettingsPageInner() {
         const match = inputUrl.match(/^(https?:\/\/[^\/]+)/);
         baseDomain = match ? match[1] : inputUrl;
       }
-      
-      const targetUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
+      targetUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
+    }
 
+    setTestingWebhooks(prev => ({ ...prev, [endpoint]: true }));
+    setWebhookStatuses(prev => ({ ...prev, [endpoint]: 'idle' }));
+    try {
       // Add timestamp and company context to match automation.ts behavior
       const companyName = form.companyName || 'Volta Rentals Tanzania';
       const finalPayload = {
@@ -511,6 +530,7 @@ function SettingsPageInner() {
                         {
                           key: 'volta-booking',
                           label: '🚀 New Booking Webhook',
+                          formField: 'webhookUrlBooking',
                           desc: 'Triggered when client places a booking. Processes details, syncs sheets, dispatches email & manager Telegram alert.',
                           payload: {
                             bookingCode: 'VR-TEST99',
@@ -548,6 +568,7 @@ function SettingsPageInner() {
                         {
                           key: 'payment-verified',
                           label: '💳 Payment Verified Webhook',
+                          formField: 'webhookUrlPayment',
                           desc: 'Triggered when clients complete card or mobile money payments. Dispatches trauma-free billing & syncs spreadsheet ledgers.',
                           payload: {
                             bookingCode: 'VR-TEST99',
@@ -560,6 +581,7 @@ function SettingsPageInner() {
                         {
                           key: 'booking-status-updated',
                           label: '📋 Booking Status Webhook',
+                          formField: 'webhookUrlStatus',
                           desc: 'Triggered when status changes to Active or Cancelled. Re-calibrates TRA EFD compliance nodes and automates logistics.',
                           payload: {
                             bookingCode: 'VR-TEST99',
@@ -571,6 +593,7 @@ function SettingsPageInner() {
                         {
                           key: 'car-added',
                           label: '🚗 Car Added Webhook',
+                          formField: 'webhookUrlCar',
                           desc: 'Triggered when a vehicle is introduced to Fleet Control. Automatically creates a record in your Google Sheet database.',
                           payload: {
                             carId: 'CAR-LC-V8-001',
@@ -590,6 +613,7 @@ function SettingsPageInner() {
                         {
                           key: 'driver-added',
                           label: '🧑‍✈️ Driver Added Webhook',
+                          formField: 'webhookUrlDriver',
                           desc: 'Triggered upon onboarding a new driver in Driver Dispatch. Syncs driver credentials and metrics sheets.',
                           payload: {
                             driverId: 'DRV-JMW-001',
@@ -608,6 +632,7 @@ function SettingsPageInner() {
                         {
                           key: 'volta-user-register',
                           label: '👤 User Register Webhook',
+                          formField: 'webhookUrlUser',
                           desc: 'Triggered when new clients sign up. Initiates welcoming flows, dispatches custom HTML emails and maps CRM database records.',
                           payload: {
                             userId: 'USR-JM-001',
@@ -630,7 +655,7 @@ function SettingsPageInner() {
                         return (
                           <div key={trigger.key} className="bg-muted/40 border border-border rounded-2xl p-6 space-y-4 hover:border-primary/20 transition-all duration-300">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                              <div className="space-y-1">
+                              <div className="space-y-1 flex-1">
                                 <div className="flex items-center gap-2">
                                   <h4 className="text-xs font-black uppercase text-foreground">{trigger.label}</h4>
                                   <code className="text-[8px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
@@ -659,6 +684,26 @@ function SettingsPageInner() {
                                   Trigger
                                 </Button>
                               </div>
+                            </div>
+
+                            {/* Specific URL Override Input */}
+                            <div className="space-y-1.5 bg-background/50 border border-border/60 rounded-xl p-4">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[8px] font-black uppercase text-muted-foreground">
+                                  Specific Webhook URL (Overrides base setting)
+                                </label>
+                                {form[trigger.formField] && (
+                                  <span className="text-[8px] font-bold text-primary uppercase font-mono tracking-wider">
+                                    Override Active
+                                  </span>
+                                )}
+                              </div>
+                              <Input
+                                value={form[trigger.formField] ?? ""}
+                                onChange={e => setForm({...form, [trigger.formField]: e.target.value})}
+                                placeholder={`e.g. https://mwijay-automation.duckdns.org/webhook/volta-booking/${trigger.key === 'volta-booking' ? 'volta-booking' : trigger.key}`}
+                                className="h-10 bg-background border-none font-mono text-[10px] text-foreground placeholder:italic"
+                              />
                             </div>
 
                             {/* Payload Toggle & Console Logs */}

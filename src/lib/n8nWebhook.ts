@@ -1,3 +1,6 @@
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/firebase';
+
 const N8N_BASE = process.env.NEXT_PUBLIC_N8N_BASE_URL || 
   'https://mwijay-automation.duckdns.org/webhook-test/volta-booking';
 
@@ -11,31 +14,66 @@ type WebhookEvent =
 
 export async function triggerN8N(event: WebhookEvent, payload: any) {
   try {
-    let inputUrl = N8N_BASE.trim().replace(/\/+$/, '');
-    
-    // Determine if sandbox or production webhook type
-    let webhookType = 'webhook-test';
-    if (inputUrl.includes('/webhook/')) {
-      webhookType = 'webhook';
-    } else if (inputUrl.includes('/webhook-test/')) {
-      webhookType = 'webhook-test';
-    } else if (inputUrl.endsWith('/webhook')) {
-      webhookType = 'webhook';
-    } else if (inputUrl.endsWith('/webhook-test')) {
-      webhookType = 'webhook-test';
+    let specificUrl = '';
+
+    // 1. Check environment variable overrides first
+    if (event === 'volta-booking') specificUrl = process.env.NEXT_PUBLIC_N8N_URL_BOOKING || '';
+    else if (event === 'payment-verified') specificUrl = process.env.NEXT_PUBLIC_N8N_URL_PAYMENT || '';
+    else if (event === 'booking-status-updated') specificUrl = process.env.NEXT_PUBLIC_N8N_URL_STATUS || '';
+    else if (event === 'car-added') specificUrl = process.env.NEXT_PUBLIC_N8N_URL_CAR || '';
+    else if (event === 'driver-added') specificUrl = process.env.NEXT_PUBLIC_N8N_URL_DRIVER || '';
+    else if (event === 'volta-user-register') specificUrl = process.env.NEXT_PUBLIC_N8N_URL_USER || '';
+
+    // 2. Check Firestore overrides if environment variables are not configured
+    if (!specificUrl) {
+      try {
+        const brandingRef = doc(db, 'settings', 'branding');
+        const brandingSnap = await getDoc(brandingRef);
+        if (brandingSnap.exists()) {
+          const snapData = brandingSnap.data();
+          if (event === 'volta-booking') specificUrl = snapData.webhookUrlBooking || '';
+          else if (event === 'payment-verified') specificUrl = snapData.webhookUrlPayment || '';
+          else if (event === 'booking-status-updated') specificUrl = snapData.webhookUrlStatus || '';
+          else if (event === 'car-added') specificUrl = snapData.webhookUrlCar || '';
+          else if (event === 'driver-added') specificUrl = snapData.webhookUrlDriver || '';
+          else if (event === 'volta-user-register') specificUrl = snapData.webhookUrlUser || '';
+        }
+      } catch (firestoreErr) {
+        console.warn('n8nWebhook: Firestore overrides fetch skipped or failed.');
+      }
     }
-    
-    // Extract base domain
-    let baseDomain = '';
-    try {
-      const parsed = new URL(inputUrl);
-      baseDomain = `${parsed.protocol}//${parsed.host}`;
-    } catch {
-      const match = inputUrl.match(/^(https?:\/\/[^\/]+)/);
-      baseDomain = match ? match[1] : inputUrl;
+
+    let url = '';
+    if (specificUrl) {
+      url = specificUrl.trim();
+    } else {
+      let inputUrl = N8N_BASE.trim().replace(/\/+$/, '');
+      
+      // Determine if sandbox or production webhook type
+      let webhookType = 'webhook-test';
+      if (inputUrl.includes('/webhook/')) {
+        webhookType = 'webhook';
+      } else if (inputUrl.includes('/webhook-test/')) {
+        webhookType = 'webhook-test';
+      } else if (inputUrl.endsWith('/webhook')) {
+        webhookType = 'webhook';
+      } else if (inputUrl.endsWith('/webhook-test')) {
+        webhookType = 'webhook-test';
+      }
+      
+      // Extract base domain
+      let baseDomain = '';
+      try {
+        const parsed = new URL(inputUrl);
+        baseDomain = `${parsed.protocol}//${parsed.host}`;
+      } catch {
+        const match = inputUrl.match(/^(https?:\/\/[^\/]+)/);
+        baseDomain = match ? match[1] : inputUrl;
+      }
+      
+      url = `${baseDomain}/${webhookType}/volta-booking/${event}`;
     }
-    
-    const url = `${baseDomain}/${webhookType}/volta-booking/${event}`;
+
     console.log(`🔔 n8n trigger: ${event} -> ${url}`, payload);
     
     const res = await fetch(url, {

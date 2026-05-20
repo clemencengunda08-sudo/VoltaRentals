@@ -9,20 +9,29 @@ import { db } from '@/firebase';
 
 async function triggerWebhook(endpoint: string, data: any) {
   let webhookUrl = '';
+  let specificUrl = '';
   let companyName = 'Volta Rentals Tanzania';
 
   try {
     const brandingRef = doc(db, 'settings', 'branding');
     const brandingSnap = await getDoc(brandingRef);
     if (brandingSnap.exists()) {
-      webhookUrl = brandingSnap.data().n8nWebhookUrl || '';
-      companyName = brandingSnap.data().companyName || companyName;
+      const snapData = brandingSnap.data();
+      webhookUrl = snapData.n8nWebhookUrl || '';
+      companyName = snapData.companyName || companyName;
+
+      if (endpoint === 'volta-booking') specificUrl = snapData.webhookUrlBooking || '';
+      else if (endpoint === 'payment-verified') specificUrl = snapData.webhookUrlPayment || '';
+      else if (endpoint === 'booking-status-updated') specificUrl = snapData.webhookUrlStatus || '';
+      else if (endpoint === 'car-added') specificUrl = snapData.webhookUrlCar || '';
+      else if (endpoint === 'driver-added') specificUrl = snapData.webhookUrlDriver || '';
+      else if (endpoint === 'volta-user-register') specificUrl = snapData.webhookUrlUser || '';
     }
   } catch (e) {
     console.warn("Automation: Settings fetch failed.");
   }
 
-  if (!webhookUrl) {
+  if (!specificUrl && !webhookUrl) {
     console.warn(`N8N Automation: No webhook URL configured for ${endpoint}`);
     return;
   }
@@ -66,31 +75,36 @@ async function triggerWebhook(endpoint: string, data: any) {
   };
 
   try {
-    let inputUrl = webhookUrl.trim().replace(/\/+$/, '');
-    
-    // Determine if sandbox or production webhook type
-    let webhookType = 'webhook-test';
-    if (inputUrl.includes('/webhook/')) {
-      webhookType = 'webhook';
-    } else if (inputUrl.includes('/webhook-test/')) {
-      webhookType = 'webhook-test';
-    } else if (inputUrl.endsWith('/webhook')) {
-      webhookType = 'webhook';
-    } else if (inputUrl.endsWith('/webhook-test')) {
-      webhookType = 'webhook-test';
+    let finalUrl = '';
+    if (specificUrl) {
+      finalUrl = specificUrl.trim();
+    } else {
+      let inputUrl = webhookUrl.trim().replace(/\/+$/, '');
+      
+      // Determine if sandbox or production webhook type
+      let webhookType = 'webhook-test';
+      if (inputUrl.includes('/webhook/')) {
+        webhookType = 'webhook';
+      } else if (inputUrl.includes('/webhook-test/')) {
+        webhookType = 'webhook-test';
+      } else if (inputUrl.endsWith('/webhook')) {
+        webhookType = 'webhook';
+      } else if (inputUrl.endsWith('/webhook-test')) {
+        webhookType = 'webhook-test';
+      }
+      
+      // Extract base domain
+      let baseDomain = '';
+      try {
+        const parsed = new URL(inputUrl);
+        baseDomain = `${parsed.protocol}//${parsed.host}`;
+      } catch {
+        const match = inputUrl.match(/^(https?:\/\/[^\/]+)/);
+        baseDomain = match ? match[1] : inputUrl;
+      }
+      
+      finalUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
     }
-    
-    // Extract base domain
-    let baseDomain = '';
-    try {
-      const parsed = new URL(inputUrl);
-      baseDomain = `${parsed.protocol}//${parsed.host}`;
-    } catch {
-      const match = inputUrl.match(/^(https?:\/\/[^\/]+)/);
-      baseDomain = match ? match[1] : inputUrl;
-    }
-    
-    const finalUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
 
     const res = await fetch(finalUrl, {
       method: 'POST',
