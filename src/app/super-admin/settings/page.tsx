@@ -30,6 +30,24 @@ function SettingsPageInner() {
   const [testingWebhook, setTestingWebhook] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<'idle'|'ok'|'fail'>('idle');
   const [securityPin, setSecurityPin] = useState('8104');
+  const [webhookStatuses, setWebhookStatuses] = useState<Record<string, 'idle'|'ok'|'fail'>>({
+    'volta-booking': 'idle',
+    'payment-verified': 'idle',
+    'booking-status-updated': 'idle',
+    'car-added': 'idle',
+    'driver-added': 'idle',
+    'volta-user-register': 'idle',
+  });
+  const [testingWebhooks, setTestingWebhooks] = useState<Record<string, boolean>>({
+    'volta-booking': false,
+    'payment-verified': false,
+    'booking-status-updated': false,
+    'car-added': false,
+    'driver-added': false,
+    'volta-user-register': false,
+  });
+  const [lastResponses, setLastResponses] = useState<Record<string, any>>({});
+  const [expandedPayloads, setExpandedPayloads] = useState<Record<string, boolean>>({});
   const [form, setForm] = useState<any>({ 
     companyName: 'Volta Rentals', 
     tagline: 'Elite Mobility for the Modern Executive',
@@ -166,6 +184,76 @@ function SettingsPageInner() {
       toast({ variant: "destructive", title: "Webhook unreachable" });
     } finally {
       setTestingWebhook(false);
+    }
+  };
+
+  const testSingleWebhook = async (endpoint: string, payload: any) => {
+    if (!form.n8nWebhookUrl) {
+      toast({ variant: "destructive", title: "Enter webhook URL first" });
+      return;
+    }
+    setTestingWebhooks(prev => ({ ...prev, [endpoint]: true }));
+    setWebhookStatuses(prev => ({ ...prev, [endpoint]: 'idle' }));
+    try {
+      let targetUrl = form.n8nWebhookUrl;
+      
+      // Prevent double-pathing if user provides a full URL
+      if (!targetUrl.endsWith(endpoint) && !targetUrl.includes(endpoint)) {
+        targetUrl = targetUrl.endsWith('/') ? `${targetUrl}${endpoint}` : `${targetUrl}/${endpoint}`;
+      }
+
+      // Add timestamp and company context to match automation.ts behavior
+      const companyName = form.companyName || 'Volta Rentals Tanzania';
+      const finalPayload = {
+        timestamp: new Date().toISOString(),
+        companyName: companyName,
+        companyId: 'volta001',
+        event: endpoint,
+        ...payload
+      };
+
+      const res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(finalPayload),
+      });
+
+      let responseText = '';
+      try {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const json = await res.json();
+          responseText = JSON.stringify(json, null, 2);
+          setLastResponses(prev => ({ ...prev, [endpoint]: { status: res.status, body: json } }));
+        } else {
+          responseText = await res.text();
+          setLastResponses(prev => ({ ...prev, [endpoint]: { status: res.status, body: responseText } }));
+        }
+      } catch (err) {
+        responseText = 'Response read failed';
+      }
+
+      const isOk = res.ok;
+      setWebhookStatuses(prev => ({ ...prev, [endpoint]: isOk ? 'ok' : 'fail' }));
+      
+      if (endpoint === 'volta-booking') {
+        setWebhookStatus(isOk ? 'ok' : 'fail');
+      }
+      
+      toast({ 
+        title: isOk ? `✅ ${endpoint} Connected!` : `⚠️ ${endpoint} Failed`, 
+        description: isOk ? `Successfully reached n8n (HTTP ${res.status}).` : `n8n returned HTTP ${res.status}. Check details below.`,
+        variant: isOk ? 'default' : 'destructive' 
+      });
+    } catch (e: any) {
+      setWebhookStatuses(prev => ({ ...prev, [endpoint]: 'fail' }));
+      if (endpoint === 'volta-booking') {
+        setWebhookStatus('fail');
+      }
+      setLastResponses(prev => ({ ...prev, [endpoint]: { status: 'ERR', body: e.message || 'Connection failed/timeout' } }));
+      toast({ variant: "destructive", title: `❌ ${endpoint} Webhook Unreachable`, description: e.message || "Failed to fetch" });
+    } finally {
+      setTestingWebhooks(prev => ({ ...prev, [endpoint]: false }));
     }
   };
 
@@ -346,76 +434,231 @@ function SettingsPageInner() {
 
             {/* n8n Webhook Section */}
             <Card className="rounded-[2.5rem] border-border bg-card p-10 shadow-2xl space-y-8">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <Webhook className="text-primary h-6 w-6" />
                   <div>
-                    <h2 className="text-sm font-black uppercase tracking-widest">n8n Automation Engine</h2>
-                    <p className="text-[9px] text-muted-foreground uppercase tracking-widest mt-1">Configure your n8n webhook for booking automation</p>
+                    <h2 className="text-sm font-black uppercase tracking-widest text-foreground">n8n Webhook Testing Terminal</h2>
+                    <p className="text-[9px] text-muted-foreground uppercase tracking-widest mt-1">Configure and individually test each automation webhook trigger</p>
                   </div>
                 </div>
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase ${
-                  webhookStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500' :
-                  webhookStatus === 'fail' ? 'bg-red-500/10 text-red-500' :
-                  'bg-muted text-muted-foreground'
-                }`}>
-                  {webhookStatus === 'ok' && <CheckCircle2 size={10} />}
-                  {webhookStatus === 'fail' && <XCircle size={10} />}
-                  {webhookStatus === 'idle' && <AlertTriangle size={10} />}
-                  {webhookStatus === 'ok' ? 'Connected' : webhookStatus === 'fail' ? 'Failed' : 'Not Tested'}
-                </div>
+                <Button onClick={handleSave} disabled={saving} className="h-12 bg-primary font-black uppercase tracking-widest text-[10px] rounded-xl gap-2 px-6 self-start md:self-auto">
+                  {saving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save size={16} />} Save Webhook URL
+                </Button>
               </div>
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">n8n Webhook Base URL</label>
+                  <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">n8n Webhook Base URL (Without Trailing Slash)</label>
                   <Input
                     value={form.n8nWebhookUrl ?? ""}
                     onChange={e => setForm({...form, n8nWebhookUrl: e.target.value})}
-                    placeholder="https://your-n8n-instance.com/webhook"
-                    className="h-12 bg-muted border-none font-mono text-xs"
+                    placeholder="e.g. https://mwijay-automation.duckdns.org/webhook-test"
+                    className="h-12 bg-muted border-none font-mono text-xs text-foreground"
                   />
                 </div>
 
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-[10px] text-muted-foreground leading-relaxed">
+                  <p className="text-[9px] font-black uppercase text-primary mb-1">🔗 Integration Architecture</p>
+                  Each trigger will append its event path (e.g. <code className="bg-muted px-1 rounded text-primary font-mono">/volta-booking</code>) to the base URL configured above. Make sure your n8n workflow triggers match these paths.
+                </div>
+
+                {/* Webhook Testing Harness */}
                 {form.n8nWebhookUrl && (
-                  <div className="bg-muted/50 rounded-xl p-4 space-y-2 border border-border">
-                    <p className="text-[9px] font-black uppercase text-muted-foreground">Active Webhook Endpoints</p>
-                    {[
-                      { label: 'New Booking', path: '/volta-booking', desc: 'Triggered on every new customer booking' },
-                      { label: 'Payment Verified', path: '/payment-verified', desc: 'Triggered when payment is confirmed' },
-                      { label: 'Booking Status', path: '/booking-status-updated', desc: 'Status changes (confirmed, cancelled)' },
-                    ].map(ep => (
-                      <div key={ep.path} className="flex items-center justify-between py-2 border-t border-border">
-                        <div>
-                          <p className="text-[10px] font-black text-foreground uppercase">{ep.label}</p>
-                          <p className="text-[8px] text-muted-foreground">{ep.desc}</p>
-                        </div>
-                        <code className="text-[9px] font-mono bg-primary/10 text-primary px-2 py-1 rounded-lg">
-                          {form.n8nWebhookUrl}{ep.path}
-                        </code>
-                      </div>
-                    ))}
+                  <div className="space-y-6 pt-4 border-t border-border">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-foreground">Independent Trigger Harness</h3>
+                    
+                    <div className="grid grid-cols-1 gap-6">
+                      {[
+                        {
+                          key: 'volta-booking',
+                          label: '🚀 New Booking Webhook',
+                          desc: 'Triggered when client places a booking. Processes details, syncs sheets, dispatches email & manager Telegram alert.',
+                          payload: {
+                            bookingCode: 'VR-TEST99',
+                            firebaseId: 'test_booking_123',
+                            customerName: 'Clemence Ngunda',
+                            phone: '+255790942616',
+                            email: 'clemencengunda08@gmail.com',
+                            vehicle: 'Toyota Land Cruiser V8',
+                            carId: 'car_lc_v8_001',
+                            plateNumber: 'T 777 DFF',
+                            pickupLocation: 'Julius Nyerere International Airport (DAR)',
+                            startDate: new Date().toISOString().slice(0, 10),
+                            endDate: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
+                            durationDays: 3,
+                            dailyRate: 250000,
+                            totalAmount: 770000,
+                            airportSurcharge: 20000,
+                            chauffeurFee: 150000,
+                            baseAmount: 600000,
+                            status: 'Confirmed',
+                            paymentStatus: 'Pending',
+                            amountPaid: 0,
+                            balanceDue: 770000,
+                            driverName: 'Assigned Driver',
+                            driverEmail: 'driver@voltarentals.co.tz',
+                            reminder48hSent: 'No',
+                            reminder24hSent: 'No',
+                            createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+                            lastUpdated: new Date().toISOString().replace('T', ' ').slice(0, 19),
+                            aiTag: 'VIP Customer',
+                            notes: 'Testing Volta New Booking n8n Integration.',
+                            chauffeurRequested: 'Yes'
+                          }
+                        },
+                        {
+                          key: 'payment-verified',
+                          label: '💳 Payment Verified Webhook',
+                          desc: 'Triggered when clients complete card or mobile money payments. Dispatches trauma-free billing & syncs spreadsheet ledgers.',
+                          payload: {
+                            bookingCode: 'VR-TEST99',
+                            amountPaid: 770000,
+                            trackingId: 'pesapal_track_998877',
+                            paymentMethod: 'M-Pesa',
+                            processedAt: new Date().toISOString().replace('T', ' ').slice(0, 19)
+                          }
+                        },
+                        {
+                          key: 'booking-status-updated',
+                          label: '📋 Booking Status Webhook',
+                          desc: 'Triggered when status changes to Active or Cancelled. Re-calibrates TRA EFD compliance nodes and automates logistics.',
+                          payload: {
+                            bookingCode: 'VR-TEST99',
+                            status: 'Active',
+                            paymentStatus: 'Paid',
+                            updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19)
+                          }
+                        },
+                        {
+                          key: 'car-added',
+                          label: '🚗 Car Added Webhook',
+                          desc: 'Triggered when a vehicle is introduced to Fleet Control. Automatically creates a record in your Google Sheet database.',
+                          payload: {
+                            carId: 'CAR-LC-V8-001',
+                            firebaseId: 'car_lc_v8_001',
+                            make: 'Toyota',
+                            model: 'Land Cruiser V8',
+                            plateNumber: 'T 777 DFF',
+                            category: 'Luxury SUV',
+                            dailyRate: 250000,
+                            status: 'Available',
+                            imageUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf',
+                            description: 'Supreme executive V8 Land Cruiser with presidential comfort.',
+                            createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+                            lastUpdated: new Date().toISOString().replace('T', ' ').slice(0, 19)
+                          }
+                        },
+                        {
+                          key: 'driver-added',
+                          label: '🧑‍✈️ Driver Added Webhook',
+                          desc: 'Triggered upon onboarding a new driver in Driver Dispatch. Syncs driver credentials and metrics sheets.',
+                          payload: {
+                            driverId: 'DRV-JMW-001',
+                            firebaseId: 'driver_jmw_001',
+                            fullName: 'James Mwangi',
+                            phone: '+255788123456',
+                            email: 'james.mwangi@voltarentals.co.tz',
+                            licenseNumber: 'TZ-DL-98765',
+                            status: 'Available',
+                            experience: 8,
+                            rating: 4.9,
+                            totalTrips: 42,
+                            createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19)
+                          }
+                        },
+                        {
+                          key: 'volta-user-register',
+                          label: '👤 User Register Webhook',
+                          desc: 'Triggered when new clients sign up. Initiates welcoming flows, dispatches custom HTML emails and maps CRM database records.',
+                          payload: {
+                            userId: 'USR-JM-001',
+                            firebaseId: 'user_jm_001',
+                            name: 'Jane Miller',
+                            email: 'jane.miller@example.com',
+                            phone: '+255655987654',
+                            totalBookings: 0,
+                            totalSpent: 0,
+                            vipStatus: 'Standard',
+                            registeredAt: new Date().toISOString().replace('T', ' ').slice(0, 19)
+                          }
+                        }
+                      ].map(trigger => {
+                        const status = webhookStatuses[trigger.key] || 'idle';
+                        const isTesting = testingWebhooks[trigger.key] || false;
+                        const response = lastResponses[trigger.key];
+                        const isPayloadExpanded = expandedPayloads[trigger.key] || false;
+
+                        return (
+                          <div key={trigger.key} className="bg-muted/40 border border-border rounded-2xl p-6 space-y-4 hover:border-primary/20 transition-all duration-300">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-xs font-black uppercase text-foreground">{trigger.label}</h4>
+                                  <code className="text-[8px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                                    /{trigger.key}
+                                  </code>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground leading-relaxed max-w-xl">{trigger.desc}</p>
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0">
+                                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[8px] font-black uppercase ${
+                                  status === 'ok' ? 'bg-emerald-500/10 text-emerald-500' :
+                                  status === 'fail' ? 'bg-red-500/10 text-red-500' :
+                                  'bg-muted text-muted-foreground'
+                                }`}>
+                                  {status === 'ok' && <CheckCircle2 size={8} />}
+                                  {status === 'fail' && <XCircle size={8} />}
+                                  {status === 'idle' && <AlertTriangle size={8} />}
+                                  {status === 'ok' ? 'Connected' : status === 'fail' ? 'Failed' : 'Ready'}
+                                </div>
+                                <Button 
+                                  onClick={() => testSingleWebhook(trigger.key, trigger.payload)} 
+                                  disabled={isTesting}
+                                  className="h-10 px-4 rounded-xl bg-foreground text-background hover:bg-foreground/90 font-black text-[9px] uppercase tracking-widest gap-1.5 transition-all"
+                                >
+                                  {isTesting ? <Loader2 className="animate-spin h-3 w-3" /> : <Zap size={10} />}
+                                  Trigger
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Payload Toggle & Console Logs */}
+                            <div className="flex gap-4 text-[9px] font-black uppercase">
+                              <button 
+                                onClick={() => setExpandedPayloads(prev => ({ ...prev, [trigger.key]: !isPayloadExpanded }))}
+                                className="text-primary hover:underline transition-all tracking-wider"
+                              >
+                                {isPayloadExpanded ? 'Hide Payload' : 'View Payload Schema'}
+                              </button>
+                              
+                              {response && (
+                                <span className={response.status >= 200 && response.status < 300 ? "text-emerald-500" : "text-rose-500"}>
+                                  Last Status: {response.status}
+                                </span>
+                              )}
+                            </div>
+
+                            {isPayloadExpanded && (
+                              <pre className="text-[9px] font-mono bg-background border border-border p-4 rounded-xl text-muted-foreground overflow-x-auto max-h-60 leading-normal">
+                                {JSON.stringify(trigger.payload, null, 2)}
+                              </pre>
+                            )}
+
+                            {response && (
+                              <div className="bg-background border border-border/80 rounded-xl p-4 space-y-1.5">
+                                <p className="text-[8px] font-black uppercase text-muted-foreground">n8n Execution Log Response</p>
+                                <pre className="text-[9px] font-mono text-foreground overflow-x-auto max-h-40 whitespace-pre-wrap leading-normal">
+                                  {typeof response.body === 'string' ? response.body : JSON.stringify(response.body, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
-
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-                  <p className="text-[9px] font-black uppercase text-primary mb-1">n8n Workflow Setup</p>
-                  <p className="text-[10px] text-muted-foreground leading-relaxed">
-                    Import the <strong>VoltaRentals Real Production Engine v3</strong> JSON into your n8n instance. 
-                    The booking webhook path is <code className="bg-muted px-1 rounded text-primary font-mono">/volta-booking</code>.
-                    Set the base URL above (without trailing slash).
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <Button onClick={testWebhook} disabled={testingWebhook || !form.n8nWebhookUrl} variant="outline" className="h-14 px-8 rounded-xl font-black uppercase text-[10px] tracking-widest border-border gap-2">
-                  {testingWebhook ? <Loader2 className="animate-spin h-4 w-4" /> : <Zap size={16} />}
-                  Test Connection
-                </Button>
-                <Button onClick={handleSave} disabled={saving} className="flex-1 h-14 bg-primary font-black uppercase tracking-widest text-[10px] rounded-xl gap-2">
-                  {saving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save size={16} />} Save Webhook Config
-                </Button>
               </div>
             </Card>
 
