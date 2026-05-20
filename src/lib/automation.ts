@@ -26,6 +26,7 @@ async function triggerWebhook(endpoint: string, data: any) {
       else if (endpoint === 'car-added') specificUrl = snapData.webhookUrlCar || '';
       else if (endpoint === 'driver-added') specificUrl = snapData.webhookUrlDriver || '';
       else if (endpoint === 'volta-user-register') specificUrl = snapData.webhookUrlUser || '';
+      else if (endpoint === 'telegram-webhook') specificUrl = snapData.webhookUrlTelegram || '';
     }
   } catch (e) {
     console.warn("Automation: Settings fetch failed.");
@@ -103,7 +104,11 @@ async function triggerWebhook(endpoint: string, data: any) {
         baseDomain = match ? match[1] : inputUrl;
       }
       
-      finalUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
+      if (endpoint === 'telegram-webhook') {
+        finalUrl = `${baseDomain}/${webhookType}/volta-tg-bot/webhook`;
+      } else {
+        finalUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
+      }
     }
 
     const res = await fetch(finalUrl, {
@@ -125,5 +130,6 @@ export const automation = {
   bookingStatusUpdated: (bookingData: any) => triggerWebhook('booking-status-updated', bookingData),
   bookingCompleted: (bookingData: any) => triggerWebhook('booking-completed', bookingData),
   riskAlertTriggered: (alertData: any) => triggerWebhook('risk-alert', alertData),
-  pricingStrategyUpdate: (priceData: any) => triggerWebhook('pricing-strategy', priceData)
+  pricingStrategyUpdate: (priceData: any) => triggerWebhook('pricing-strategy', priceData),
+  telegramBotWebhook: (tgData: any) => triggerWebhook('telegram-webhook', tgData)
 };

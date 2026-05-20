@@ -30,6 +30,7 @@ import NotificationList from "@/components/notifications/NotificationList";
 import { Input } from '@/components/ui/input';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import { ModeToggle } from '@/components/ui/ModeToggle';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import Link from 'next/link';
 import { toast } from '@/hooks/use-toast';
 
@@ -110,6 +111,7 @@ export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
 
       <div className="flex items-center gap-3">
         <ModeToggle />
+        <LanguageToggle />
         
         <AnimatePresence>
           {searchOpen ? (

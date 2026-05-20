@@ -10,7 +10,8 @@ type WebhookEvent =
   | 'driver-added' 
   | 'volta-user-register' 
   | 'payment-verified' 
-  | 'booking-status-updated';
+  | 'booking-status-updated'
+  | 'telegram-webhook';
 
 export async function triggerN8N(event: WebhookEvent, payload: any) {
   try {
@@ -23,6 +24,7 @@ export async function triggerN8N(event: WebhookEvent, payload: any) {
     else if (event === 'car-added') specificUrl = process.env.NEXT_PUBLIC_N8N_URL_CAR || '';
     else if (event === 'driver-added') specificUrl = process.env.NEXT_PUBLIC_N8N_URL_DRIVER || '';
     else if (event === 'volta-user-register') specificUrl = process.env.NEXT_PUBLIC_N8N_URL_USER || '';
+    else if (event === 'telegram-webhook') specificUrl = process.env.NEXT_PUBLIC_N8N_URL_TELEGRAM || '';
 
     // 2. Check Firestore overrides if environment variables are not configured
     if (!specificUrl) {
@@ -37,6 +39,7 @@ export async function triggerN8N(event: WebhookEvent, payload: any) {
           else if (event === 'car-added') specificUrl = snapData.webhookUrlCar || '';
           else if (event === 'driver-added') specificUrl = snapData.webhookUrlDriver || '';
           else if (event === 'volta-user-register') specificUrl = snapData.webhookUrlUser || '';
+          else if (event === 'telegram-webhook') specificUrl = snapData.webhookUrlTelegram || '';
         }
       } catch (firestoreErr) {
         console.warn('n8nWebhook: Firestore overrides fetch skipped or failed.');
@@ -71,7 +74,11 @@ export async function triggerN8N(event: WebhookEvent, payload: any) {
         baseDomain = match ? match[1] : inputUrl;
       }
       
-      url = `${baseDomain}/${webhookType}/volta-booking/${event}`;
+      if (event === 'telegram-webhook') {
+        url = `${baseDomain}/${webhookType}/volta-tg-bot/webhook`;
+      } else {
+        url = `${baseDomain}/${webhookType}/volta-booking/${event}`;
+      }
     }
 
     console.log(`🔔 n8n trigger: ${event} -> ${url}`, payload);
@@ -94,6 +101,9 @@ export async function triggerN8N(event: WebhookEvent, payload: any) {
 }
 
 // Convenience functions
+export const notifyTelegramBot = (payload: any) =>
+  triggerN8N('telegram-webhook', payload);
+
 export const notifyNewCar = (car: any) => 
   triggerN8N('car-added', {
     firebaseId: car.id,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { collection, doc, setDoc, serverTimestamp, query, where, limit } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { toast } from '@/hooks/use-toast';
@@ -86,6 +86,46 @@ export default function ManualBookingPage() {
     }
     setSubmitting(true);
     try {
+      // Double Booking Shield Check: Retrieve bookings for this vehicle and filter cancelled in-memory
+      const bookingsQuery = query(
+        collection(db, 'bookings'),
+        where('vehicleId', '==', form.vehicleId)
+      );
+      const bookingsSnap = await getDocs(bookingsQuery);
+      
+      const newStart = form.startDate.getTime();
+      const newEnd = form.endDate.getTime();
+
+      let overlapFound = false;
+      let overlappingBooking: any = null;
+
+      bookingsSnap.docs.forEach((docSnap) => {
+        const b = docSnap.data();
+        if (b.status === 'cancelled') return;
+
+        // Parse existing booking dates
+        const existStart = new Date(b.startDate).getTime();
+        const existEnd = new Date(b.endDate).getTime();
+
+        // Check date overlap
+        if (newStart <= existEnd && newEnd >= existStart) {
+          overlapFound = true;
+          overlappingBooking = b;
+        }
+      });
+
+      if (overlapFound && overlappingBooking) {
+        const formattedStart = format(new Date(overlappingBooking.startDate), 'dd MMM yyyy');
+        const formattedEnd = format(new Date(overlappingBooking.endDate), 'dd MMM yyyy');
+        toast({
+          variant: 'destructive',
+          title: '🚨 Scheduling Conflict',
+          description: `This vehicle is already booked from ${formattedStart} to ${formattedEnd} (Code: ${overlappingBooking.bookingCode}). Please choose different dates or another vehicle.`,
+        });
+        setSubmitting(false);
+        return;
+      }
+
       const ref = doc(collection(db, 'bookings'));
       const bookingCode = `VOLTA-${ref.id.slice(-6).toUpperCase()}`;
       const data = {

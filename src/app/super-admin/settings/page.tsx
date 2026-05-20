@@ -37,6 +37,7 @@ function SettingsPageInner() {
     'car-added': 'idle',
     'driver-added': 'idle',
     'volta-user-register': 'idle',
+    'telegram-webhook': 'idle',
   });
   const [testingWebhooks, setTestingWebhooks] = useState<Record<string, boolean>>({
     'volta-booking': false,
@@ -45,6 +46,7 @@ function SettingsPageInner() {
     'car-added': false,
     'driver-added': false,
     'volta-user-register': false,
+    'telegram-webhook': false,
   });
   const [lastResponses, setLastResponses] = useState<Record<string, any>>({});
   const [expandedPayloads, setExpandedPayloads] = useState<Record<string, boolean>>({});
@@ -68,6 +70,7 @@ function SettingsPageInner() {
     webhookUrlCar: '',
     webhookUrlDriver: '',
     webhookUrlUser: '',
+    webhookUrlTelegram: '',
     pesapalEnv: 'sandbox',
     pesapalKey: '',
     pesapalSecret: '',
@@ -115,6 +118,7 @@ function SettingsPageInner() {
         webhookUrlCar: form.webhookUrlCar ?? "",
         webhookUrlDriver: form.webhookUrlDriver ?? "",
         webhookUrlUser: form.webhookUrlUser ?? "",
+        webhookUrlTelegram: form.webhookUrlTelegram ?? "",
         updatedAt: serverTimestamp()
       };
       await setDoc(doc(db, 'settings', 'branding'), brandingData, { merge: true });
@@ -226,6 +230,7 @@ function SettingsPageInner() {
     else if (endpoint === 'car-added') targetUrl = form.webhookUrlCar;
     else if (endpoint === 'driver-added') targetUrl = form.webhookUrlDriver;
     else if (endpoint === 'volta-user-register') targetUrl = form.webhookUrlUser;
+    else if (endpoint === 'telegram-webhook') targetUrl = form.webhookUrlTelegram;
 
     // Fallback to legacy base URL parsing if individual URL is empty
     if (!targetUrl) {
@@ -253,7 +258,11 @@ function SettingsPageInner() {
         const match = inputUrl.match(/^(https?:\/\/[^\/]+)/);
         baseDomain = match ? match[1] : inputUrl;
       }
-      targetUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
+      if (endpoint === 'telegram-webhook') {
+        targetUrl = `${baseDomain}/${webhookType}/volta-tg-bot/webhook`;
+      } else {
+        targetUrl = `${baseDomain}/${webhookType}/volta-booking/${endpoint}`;
+      }
     }
 
     setTestingWebhooks(prev => ({ ...prev, [endpoint]: true }));
@@ -644,6 +653,32 @@ function SettingsPageInner() {
                             totalSpent: 0,
                             vipStatus: 'Standard',
                             registeredAt: new Date().toISOString().replace('T', ' ').slice(0, 19)
+                          }
+                        },
+                        {
+                          key: 'telegram-webhook',
+                          label: '🤖 Telegram Bot Webhook',
+                          formField: 'webhookUrlTelegram',
+                          desc: 'Triggered by Telegram updates (message/commands sent to your bot). Routes queries, dispatch status, and client responses.',
+                          payload: {
+                            update_id: 998877665,
+                            message: {
+                              message_id: 420,
+                              from: {
+                                id: 554433221,
+                                is_bot: false,
+                                first_name: "Davie",
+                                last_name: "Mwijage",
+                                username: "mwijay"
+                              },
+                              chat: {
+                                id: -10099887766,
+                                title: "Volta Fleet Control",
+                                type: "group"
+                              },
+                              date: Math.floor(Date.now() / 1000),
+                              text: "🔥 New booking VR-TEST99 is ready for dispatch!"
+                            }
                           }
                         }
                       ].map(trigger => {

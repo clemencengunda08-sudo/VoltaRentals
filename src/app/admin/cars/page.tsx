@@ -25,6 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { notifyNewCar } from '@/lib/n8nWebhook';
 
 export default function AdminCarsPage() {
   const db = useFirestore();
@@ -77,19 +78,15 @@ export default function AdminCarsPage() {
     try {
       for (const car of rawCars) {
         setSyncProgress(`Synced ${count}/${rawCars.length} cars...`);
-        await fetch("https://mwijay-automation.duckdns.org/webhook-test/volta-booking/car-added", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firebaseId: car.id,
-            make: car.make || car.brand || "",
-            model: car.model || car.name || "",
-            plateNumber: car.plateNumber || car.plate || "",
-            category: car.category || car.type || "",
-            dailyRate: Number(car.pricePerDay || car.dailyRate || car.rate || 0),
-            status: car.available === false ? "Maintenance" : "Available",
-            imageUrl: car.images?.[0] || car.imageUrl || car.image || ""
-          })
+        await notifyNewCar({
+          id: car.id,
+          make: car.make || car.brand || "",
+          model: car.model || car.name || "",
+          plateNumber: car.plateNumber || car.plate || "",
+          category: car.category || car.type || "",
+          dailyRate: Number(car.pricePerDay || car.dailyRate || car.rate || 0),
+          status: car.available === false ? "Maintenance" : "Available",
+          imageUrl: car.images?.[0] || car.imageUrl || car.image || ""
         });
         count++;
         setSyncProgress(`Synced ${count}/${rawCars.length} cars...`);

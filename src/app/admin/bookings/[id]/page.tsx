@@ -131,6 +131,33 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
     } finally {
       setIsUpdating(false);
     }
+  const handleCompletePaymentInFull = async () => {
+    if (!booking) return;
+    setIsUpdating(true);
+    try {
+      const updateData = {
+        amountPaid: Number(booking.totalPrice),
+        balanceDue: 0,
+        paymentStatus: 'paid',
+        updatedAt: serverTimestamp(),
+      };
+      await updateDoc(bookingRef, updateData);
+      setAmountPaid(booking.totalPrice);
+      
+      // Trigger n8n accounting webhook sync
+      automation.paymentVerified({
+        bookingCode: booking.bookingCode,
+        amountPaid: booking.totalPrice,
+        paymentMethod: 'Cash (Complete Settled)',
+        processedAt: new Date().toISOString()
+      });
+      
+      toast({ title: "Payment Settled & Synced ✅" });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Settlement Failed" });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (loading) return <div className="min-h-[60vh] flex items-center justify-center"><Loader2 className="animate-spin h-10 w-10 text-primary" /></div>;
@@ -151,21 +178,27 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-4">
+        <div className="grid grid-cols-3 gap-2 w-full md:flex md:w-auto md:gap-4 shrink-0">
            <Button 
             onClick={handleRunAiAnalysis} 
             disabled={isAnalyzing}
             variant="outline"
-            className="rounded-2xl h-14 border-primary/20 text-primary font-black uppercase text-xs gap-3"
+            className="rounded-2xl h-14 border-primary/20 text-primary font-black uppercase text-[10px] sm:text-xs gap-1.5 sm:gap-3 flex-1 md:flex-initial"
           >
-            {isAnalyzing ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw size={18} />}
-            Analyze Mission
+            {isAnalyzing ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw size={14} className="shrink-0" />}
+            Analyze
           </Button>
-          <Button onClick={() => generateRentalContract(booking)} className="bg-card border border-border text-foreground rounded-2xl h-14 px-8 font-black uppercase text-xs gap-3 shadow-xl">
-            <FileText size={18} /> Contract PDF
+          <Button 
+            onClick={() => generateRentalContract(booking)} 
+            className="bg-card border border-border text-foreground rounded-2xl h-14 font-black uppercase text-[10px] sm:text-xs gap-1.5 sm:gap-3 shadow-xl flex-1 md:flex-initial"
+          >
+            <FileText size={14} className="shrink-0" /> Contract
           </Button>
-          <Button onClick={() => generateBookingReceipt(booking)} className="bg-primary hover:bg-primary/90 text-white rounded-2xl h-14 px-8 font-black uppercase text-xs gap-3 shadow-xl shadow-primary/20">
-            <DollarSign size={18} /> Receipt PDF
+          <Button 
+            onClick={() => generateBookingReceipt(booking)} 
+            className="bg-primary hover:bg-primary/90 text-white rounded-2xl h-14 font-black uppercase text-[10px] sm:text-xs gap-1.5 sm:gap-3 shadow-xl shadow-primary/20 flex-1 md:flex-initial"
+          >
+            <DollarSign size={14} className="shrink-0" /> Receipt
           </Button>
         </div>
       </div>

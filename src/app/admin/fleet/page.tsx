@@ -40,6 +40,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { notifyNewCar } from '@/lib/n8nWebhook';
 
 export default function FleetRegistryPage() {
   const db = useFirestore();
@@ -76,21 +77,17 @@ export default function FleetRegistryPage() {
       await deleteDoc(doc(db, 'cars', carId));
 
       if (deletedCar) {
-        fetch("https://mwijay-automation.duckdns.org/webhook-test/volta-booking/car-added", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firebaseId: carId,
-            make: deletedCar.make || "",
-            model: deletedCar.model || name,
-            plateNumber: deletedCar.plateNumber || deletedCar.licensePlate || "",
-            category: deletedCar.category || "",
-            dailyRate: deletedCar.pricePerDay || 0,
-            status: "Deleted",
-            imageUrl: deletedCar.images?.[0] || "",
-            description: "Deleted"
-          })
-        }).then(res => console.log("Webhook success:", res.status))
+        notifyNewCar({
+          id: carId,
+          make: deletedCar.make || "",
+          model: deletedCar.model || name,
+          plateNumber: deletedCar.plateNumber || deletedCar.licensePlate || "",
+          category: deletedCar.category || "",
+          dailyRate: deletedCar.pricePerDay || 0,
+          status: "Deleted",
+          imageUrl: deletedCar.images?.[0] || "",
+          description: "Deleted"
+        }).then(res => console.log("Webhook success:", res))
           .catch(err => console.error("Webhook error:", err));
       }
 

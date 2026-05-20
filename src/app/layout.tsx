@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { BrandingProvider } from '@/components/providers/BrandingProvider';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutBootstrap } from '@/components/layout-bootstrap';
 import { VoltaSplash } from '@/components/ui/VoltaSplash';
 import { SecurityNode } from '@/components/security-node';
@@ -71,20 +72,22 @@ export default function RootLayout({
         
         <FirebaseClientProvider>
           <ThemeProvider>
-            <BrandingProvider>
+            <LanguageProvider>
+              <BrandingProvider>
 
-              <VoltaSplash />
-              <SecurityNode />
-              <LazyMotion features={domMax}>
-                <div className="relative min-h-screen flex flex-col">
-                  {children}
-                </div>
-              </LazyMotion>
-              <ServiceWorkerRegistration />
-              <Toaster />
-              <Analytics />
-              <SpeedInsights />
-            </BrandingProvider>
+                <VoltaSplash />
+                <SecurityNode />
+                <LazyMotion features={domMax}>
+                  <div className="relative min-h-screen flex flex-col">
+                    {children}
+                  </div>
+                </LazyMotion>
+                <ServiceWorkerRegistration />
+                <Toaster />
+                <Analytics />
+                <SpeedInsights />
+              </BrandingProvider>
+            </LanguageProvider>
           </ThemeProvider>
         </FirebaseClientProvider>
         <script

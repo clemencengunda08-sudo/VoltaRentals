@@ -300,7 +300,27 @@ export default function AddCarPage() {
               )} />
 
               <div className="md:col-span-2 space-y-4 pt-4">
-                <FormLabel className="text-[10px] font-black uppercase text-primary ml-1">Asset Amenities & Features</FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel className="text-[10px] font-black uppercase text-primary ml-1">Asset Amenities & Features</FormLabel>
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      onClick={() => form.setValue('features', FEATURES)} 
+                      variant="ghost" 
+                      className="h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest bg-primary/10 text-primary hover:bg-primary/20"
+                    >
+                      Select All
+                    </Button>
+                    <Button 
+                      type="button" 
+                      onClick={() => form.setValue('features', [])} 
+                      variant="ghost" 
+                      className="h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest bg-destructive/10 text-destructive hover:bg-destructive/20"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-6 bg-muted rounded-2xl">
                   {FEATURES.map((feature) => (
                     <FormField
