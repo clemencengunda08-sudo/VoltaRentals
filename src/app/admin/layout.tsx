@@ -11,6 +11,7 @@ import { FlickeringGrid } from '@/components/ui/flickering-footer';
 import { useBranding } from '@/components/providers/BrandingProvider';
 import { Zap, Loader2, LogOut } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { DemoWidget } from '@/components/demo/DemoWidget';
 
 const INACTIVITY_LIMIT = 180 * 1000; // 3 minutes for regular admins
 
@@ -125,6 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </main>
       </div>
+      <DemoWidget />
     </div>
   );
 }
